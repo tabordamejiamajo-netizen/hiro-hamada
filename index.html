@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nico Robin</title>
+    <!-- Libreria aframe -->
+    <script src="https://aframe.io/releases/1.8.0/aframe.min.js"></script>
+    <!-- Libreria MindAR -->
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+    <!-- Visor de modelos 3D -->
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+
+    <style>
+        body { margin: 0; overflow: hidden; }
+
+        /* Contenedor fijo: ventana + botón */
+        #contenedor {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            width: 92vw;
+            max-width: 1000px;
+            transform: translate(-50%, -50%) scale(0);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s;
+        }
+        #contenedor.abierta {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* Ventana */
+        #ventana {
+            width: 100%;
+            height: 62vh;
+            max-height: 540px;
+            background: #35277e;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            gap: 3%;
+            padding: 3%;
+            box-sizing: border-box;
+        }
+
+        /* Video a la IZQUIERDA */
+        #vidio {
+            flex: 1 1 50%;
+            min-width: 0;
+            max-height: 100%;
+            background: #000;
+            border-radius: 8px;
+        }
+
+        /* Modelo 3D a la DERECHA */
+        #modelo {
+            flex: 1 1 50%;
+            min-width: 0;
+            height: 100%;
+            --poster-color: transparent;
+            background: transparent;
+        }
+
+        /* Botón rojo con puntas redondeadas */
+        #btnTerminado {
+            background: #e53935;
+            color: #fff;
+            border: none;
+            border-radius: 999px;
+            padding: 12px 40px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            font-family: Arial, sans-serif;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+            transition: background 0.2s, transform 0.1s;
+        }
+        #btnTerminado:hover { background: #c62828; }
+        #btnTerminado:active { transform: scale(0.95); }
+
+        /* En celular vertical: video arriba, modelo abajo */
+        @media (orientation: portrait) {
+            #ventana { flex-direction: column; height: 68vh; max-height: none; }
+            #vidio { flex: 0 0 auto; width: 100%; height: auto; }
+            #modelo { flex: 1 1 auto; width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Escena de MindAR (solo detecta el marcador) -->
+    <a-scene
+        mindar-image="imageTargetSrc: ./targets.mind"
+        color-space="sRGB"
+        renderer="colorManagement: true, physicallyCorrectLights"
+        vr-mode-ui="enabled: false"
+        device-orientation-permission-ui="enabled: false">
+
+        <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
+        <a-entity mindar-image-target="targetIndex: 0"></a-entity>
+    </a-scene>
+
+    <!-- Ventana fija + botón -->
+    <div id="contenedor">
+        <div id="ventana">
+            <video
+                id="vidio"
+                src="./trailer.mp4"
+                preload="auto"
+                loop
+                playsinline
+                webkit-playsinline
+                controls>
+            </video>
+
+            <model-viewer
+                id="modelo"
+                src="./hero.glb"
+                auto-rotate
+                auto-rotate-delay="0"
+                rotation-per-second="40deg"
+                camera-controls
+                interaction-prompt="none"
+                shadow-intensity="1">
+            </model-viewer>
+        </div>
+
+        <button id="btnTerminado">Terminado</button>
+    </div>
+
+    <script>
+        const target = document.querySelector('[mindar-image-target]');
+        const contenedor = document.querySelector('#contenedor');
+        const video = document.querySelector('#vidio');
+        const modelo = document.querySelector('#modelo');
+        const boton = document.querySelector('#btnTerminado');
+
+        // El modelo gira solo hasta que se le da click; luego se rota arrastrando
+        modelo.addEventListener('click', () => {
+            modelo.removeAttribute('auto-rotate');
+        });
+
+        // Al detectar el marcador se abre la ventana
+        target.addEventListener('targetFound', () => {
+            contenedor.classList.add('abierta');
+            video.muted = false;
+            video.play().catch(() => {
+                // El navegador bloqueó el audio automático: arranca en silencio
+                video.muted = true;
+                video.play();
+            });
+        });
+
+        // Botón "Terminado": cierra la ventana y pausa el video
+        boton.addEventListener('click', () => {
+            contenedor.classList.remove('abierta');
+            video.pause();
+        });
+
+        // Primer toque en pantalla: activa el audio si estaba bloqueado
+        window.addEventListener('pointerdown', () => {
+            if (video.muted) video.muted = false;
+        }, { once: true });
+    </script>
+</body>
+</html>
